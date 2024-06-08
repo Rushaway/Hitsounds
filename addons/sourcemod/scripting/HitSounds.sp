@@ -6,14 +6,15 @@
 #include <cstrike>
 #include <clientprefs>
 #include <hitsounds>
+#include <multicolors>
 
 Cookie g_cVolume;
 Cookie g_cEnable;
 Cookie g_cBoss;
 Cookie g_cDetailed;
 
-#define DEFAULT_VOLUME 0.4
-#define DEFAULT_VOLUME_INT 40
+#define DEFAULT_VOLUME 0.8
+#define DEFAULT_VOLUME_INT 80
 
 enum struct PlayerData
 {
@@ -51,7 +52,7 @@ public Plugin myinfo =
 	name        = "Hit Sounds",
 	author      = "koen, tilgep",
 	description = "",
-	version     = "",
+	version     = "1.1.0",
 	url         = "https://github.com/notkoen & https://github.com/tilgep"
 };
 
@@ -113,17 +114,17 @@ public void OnClientCookiesCached(int client)
 	{
 		g_cEnable.Set(client, "1");
 		g_cBoss.Set(client, "1");
-		g_cDetailed.Set(client, "0");
-		g_cVolume.Set(client, "0.40");
+		g_cDetailed.Set(client, "1");
+		g_cVolume.Set(client, "0.80");
 	}
 
-	g_pData[client].enable = StrEqual(buffer, "1");
+	g_pData[client].enable = strcmp(buffer, "1", false) == 0;
 
 	g_cBoss.Get(client, buffer, sizeof(buffer));
-	g_pData[client].boss = StrEqual(buffer, "1");
+	g_pData[client].boss = strcmp(buffer, "1", false) == 0;
 
 	g_cDetailed.Get(client, buffer, sizeof(buffer));
-	g_pData[client].detailed = StrEqual(buffer, "1");
+	g_pData[client].detailed = strcmp(buffer, "1", false) == 0;
 
 	g_cVolume.Get(client, buffer, sizeof(buffer));
 	g_pData[client].fVolume = StringToFloat(buffer);
@@ -209,21 +210,21 @@ public int Native_OpenHitsoundMenu(Handle plugin, int numParams)
 public void ToggleZombieHitsound(int client)
 {
 	g_pData[client].enable = !g_pData[client].enable;
-	PrintToChat(client, " \x0F[Hitsound] \x01Zombie hitsounds are now %s", g_pData[client].enable ? "\x04enabled" : "\x02disabled");
+	CPrintToChat(client, "{green}[HitSound]{default} Zombie hitsounds are now %s", g_pData[client].enable ? "{green}enabled" : "{red}disabled");
 	g_pData[client].enable ? g_cEnable.Set(client, "1") : g_cEnable.Set(client, "0");
 }
 
 public void ToggleBossHitsound(int client)
 {
 	g_pData[client].boss = !g_pData[client].boss;
-	PrintToChat(client, " \x0F[Hitsound] \x01Boss hitsounds are now %s", g_pData[client].boss ? "\x04enabled" : "\x02disabled");
+	CPrintToChat(client, "{green}[HitSound]{default} Boss hitsounds are now %s", g_pData[client].boss ? "{green}enabled" : "{red}disabled");
 	g_pData[client].boss ? g_cBoss.Set(client, "1") : g_cBoss.Set(client, "0");
 }
 
 public void ToggleDetailedHitsound(int client)
 {
 	g_pData[client].detailed = !g_pData[client].detailed;
-	PrintToChat(client, " \x0F[Hitsound] \x01Detailed hitsounds are now %s", g_pData[client].detailed ? "\x04enabled" : "\x02disabled");
+	CPrintToChat(client, "{green}[HitSound]{default} Detailed hitsounds are now %s", g_pData[client].detailed ? "{green}enabled" : "{red}disabled");
 	g_pData[client].detailed ? g_cDetailed.Set(client, "1") : g_cDetailed.Set(client, "0");
 }
 
@@ -233,26 +234,26 @@ public Action Command_Hitsound(int client, int args)
 	char buffer[8];
 	int len = GetCmdArg(1, buffer, sizeof(buffer));
 
-	if (StrEqual(buffer, "off", false))
+	if (strcmp(buffer, "off", false) == 0)
 	{
 		if (g_pData[client].enable)
 		{
 			g_pData[client].enable = false;
 			g_cEnable.Set(client, "0");
-			PrintToChat(client, " \x0F[Hitsound] \x01Hitsounds have been disabled!");
+			CPrintToChat(client, "{green}[HitSound]{default} Hitsounds have been {red}disabled!");
 		}
 		else
-			PrintToChat(client, " \x0F[Hitsound] \x01Hitsounds are already disabled!");
+			CPrintToChat(client, "{green}[HitSound]{default} Hitsounds are already {red}disabled!");
 	}
-	else if (StrEqual(buffer, "on", false))
+	else if (strcmp(buffer, "on", false) == 0)
 	{
 		if (g_pData[client].enable)
-			PrintToChat(client, " \x0F[Hitsound] \x01Hitsounds are already enabled!");
+			CPrintToChat(client, "{green}[HitSound]{default} Hitsounds are already {green}enabled!");
 		else
 		{
 			g_pData[client].enable = true;
 			g_cEnable.Set(client, "1");
-			PrintToChat(client, " \x0F[Hitsound] \x01Hitsounds have been enabled!");
+			CPrintToChat(client, "{green}[HitSound]{default} Hitsounds have been {green}enabled!");
 		}
 	}
 	else
@@ -260,14 +261,13 @@ public Action Command_Hitsound(int client, int args)
 		int input;
 		if (len != 0 && StringToIntEx(buffer, input) == len)
 		{
-			if (input < 0) input = 0;
-			if (input > 100) input = 100;
+			float fVolume = input / 100.0;
+			char recalc[8];
+			Format(recalc, sizeof(recalc), "%.2f", fVolume);
 
-			char recalc[4];
-			Format(recalc, sizeof(recalc), "%.2f", input / 100.0);
 			g_pData[client].volume = input;
-			g_pData[client].fVolume = StringToFloat(recalc);
-			PrintToChat(client, " \x0F[Hitsound] \x01Hitsound volume has been changed to \x04%d", input);
+			g_pData[client].fVolume = fVolume;
+			CPrintToChat(client, "{green}[HitSound]{default} Hitsound volume has been changed to {green}%d", input);
 			g_cVolume.Set(client, recalc);
 		}
 		else
@@ -344,7 +344,7 @@ public int MenuHandler_HitMarker(Menu menu, MenuAction action, int client, int s
 					Format(buffer, sizeof(buffer), "%.2f", g_pData[client].fVolume);
 					g_cVolume.Set(client, buffer);
 
-					PrintToChat(client, " \x0F[Hitsound] \x01Hitsound volume has been changed to \x04%d", g_pData[client].volume);
+					CPrintToChat(client, "{green}[HitSound]{default} Hitsound volume has been changed to {green}%d", g_pData[client].volume);
 				}
 			}
 			DisplayCookieMenu(client);
@@ -359,10 +359,10 @@ public void Hook_EntityOnDamage(const char[] output, int caller, int activator, 
 	if (!(1 <= activator <= MaxClients) || !IsClientInGame(activator))
 		return;
 	
-	if (!IsPlayerAlive(activator) || GetClientTeam(activator) != CS_TEAM_CT)
+	if (!g_pData[activator].enable || !g_pData[activator].boss)
 		return;
 
-	if (!g_pData[activator].enable || !g_pData[activator].boss)
+	if (!IsPlayerAlive(activator) || GetClientTeam(activator) != CS_TEAM_CT)
 		return;
 
 	int tick = GetGameTickCount();
@@ -382,10 +382,10 @@ public void Hook_EventOnDamage(Event event, const char[] name, bool dontBroadcas
 	if (!(1 <= attacker <= MaxClients) || !IsClientInGame(attacker))
 		return;
 
-	if (!IsPlayerAlive(attacker) || GetClientTeam(attacker) != CS_TEAM_CT)
+	if (!g_pData[attacker].enable || g_pData[attacker].fVolume == 0.0)
 		return;
 
-	if (!g_pData[attacker].enable || g_pData[attacker].fVolume == 0.0)
+	if (!IsPlayerAlive(attacker) || GetClientTeam(attacker) != CS_TEAM_CT)
 		return;
 
 	int tick = GetGameTickCount();
